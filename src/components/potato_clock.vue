@@ -8,19 +8,34 @@
 
       <div class="timer-display">
         <div :style="timerContainerStyle">
-          <n-progress
-            type="circle"
-            :percentage="progressPercentage"
-            :color="modeColor"
-            :rail-style="{ stroke: '#18181b' }"
-            :stroke-width="strokeWidth"
-            :style="`transform: scale(${timerSize});transform-origin: center center;`"
+          <vue-countdown
+            ref="countdownRef"
+            :time="currentModeTime"
+            @end="onEnd"
+            v-slot="{ totalMilliseconds, minutes, seconds }"
           >
-            <div class="timer-text">
-              <span class="time">{{ formatTime(timeRemaining) }}</span>
-              <!-- <span class="mode-label">{{ modeLabel }}</span> -->
-            </div>
-          </n-progress>
+            <n-progress
+              type="circle"
+              :percentage="
+                Math.round(
+                  (1 - totalMilliseconds / (props.cycleList[currentCycleIndex][0] *60* 1000)) *
+                    100,
+                )
+              "
+              :color="modeColor"
+                :rail-style="{ stroke: '#18181b' }"
+              :stroke-width="strokeWidth"
+              :style="`transform: scale(${timerSize});transform-origin: center center;`"
+            >
+              <div class="timer-text">
+                <span class="time"
+                  >{{ minutes.toString().padStart(2, '0') }}:{{
+                    seconds.toString().padStart(2, '0')
+                  }}</span
+                >
+              </div>
+            </n-progress>
+          </vue-countdown>
         </div>
       </div>
 
@@ -28,22 +43,22 @@
         <div class="mode-buttons">
           <n-space>
             <n-button
-              :type="currentMode === 'focus' ? 'primary' : 'default'"
-              @click="setMode('focus')"
+              :type="currentModeLabel.toLowerCase() === 'focus' ? 'primary' : 'default'"
+              @click="currentCycleIndex = 0"
               size="large"
             >
               Focus
             </n-button>
             <n-button
-              :type="currentMode === 'shortBreak' ? 'primary' : 'default'"
-              @click="setMode('shortBreak')"
+              :type="currentModeLabel.toLowerCase() === 'rest' ? 'primary' : 'default'"
+              @click="currentCycleIndex = 1"
               size="large"
             >
               Short Break
             </n-button>
             <n-button
-              :type="currentMode === 'longBreak' ? 'primary' : 'default'"
-              @click="setMode('longBreak')"
+              :type="currentModeLabel.toLowerCase() === 'long' ? 'primary' : 'default'"
+              @click="currentCycleIndex = 2"
               size="large"
             >
               Long Break
@@ -53,17 +68,14 @@
 
         <div class="timer-controls">
           <n-space>
-            <n-button
-              type="primary"
-              size="large"
-              @click="toggleTimer"
-              :disabled="timeRemaining <= 0"
-              class="control-button"
-            >
+            <n-button type="primary" size="large" @click="toggleTimer" class="control-button">
               {{ isRunning ? 'Pause' : 'Start' }}
             </n-button>
             <n-button type="default" size="large" @click="resetTimer" class="control-button">
               Reset
+            </n-button>
+            <n-button type="default" size="large" @click="debugEndTimer" class="control-button">
+              Debug End
             </n-button>
           </n-space>
         </div>
@@ -73,41 +85,45 @@
   </n-config-provider>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
 import { NButton, NSpace, NProgress, NConfigProvider } from 'naive-ui'
 import { darkTheme } from 'naive-ui'
+import VueCountdown from '@chenfengyuan/vue-countdown'
 
-// Timer modes and durations (in seconds)
-const modes = {
-  focus: { duration: 25 * 60, label: 'Focus Time', color: '#0ea5e9' },
-  shortBreak: { duration: 5 * 60, label: 'Short Break', color: '#10b981' },
-  longBreak: { duration: 15 * 60, label: 'Long Break', color: '#8b5cf6' },
-}
+type CycleItem = [number, string];
 
-// State
-const currentMode = ref('focus')
-const timeRemaining = ref(modes.focus.duration)
+// 新增：从父组件接收cycleList，格式为 [[25, "focus"], [5, "rest"], [25, "focaus"]]
+const props = withDefaults(defineProps<{
+  cycleList: CycleItem[]
+}>(), {
+  cycleList: () => [[25, "focus"], [5, "rest"], [25, "focus"]]
+})
+const emit = defineEmits(['cycleComplete'])
+
+// 新状态：使用cycleList进行周期遍历
+const currentCycleIndex = ref(0)
 const isRunning = ref(false)
-const timerInterval = ref(null)
 const timerSize = ref(2)
 const strokeWidth = ref(5)
-const progressRef = ref(null)
-const baseSize = ref(120) // 默认初始值，将在挂载后更新为实际尺寸
+const baseSize = ref(120)
+const countdownRef = ref<InstanceType<typeof VueCountdown> | null>(null)
 
-// Computed properties
-const modeLabel = computed(() => modes[currentMode.value].label)
-const modeColor = computed(() => modes[currentMode.value].color)
-const progressPercentage = computed(() => {
-  const totalDuration = modes[currentMode.value].duration
-  return Math.round(((totalDuration - timeRemaining.value) / totalDuration) * 100)
+// 计算属性：当前周期时间（毫秒）、标签及颜色
+const currentModeTime = computed(() => {
+  // cycleList中第一个元素为分钟数
+  return props.cycleList[currentCycleIndex.value][0] * 60 * 1000
+})
+const currentModeLabel = computed(() => props.cycleList[currentCycleIndex.value][1])
+const modeColor = computed(() => {
+  const label = currentModeLabel.value.toLowerCase()
+  if (label === 'focus' || label === 'focaus') return '#0ea5e9'
+  if (label === 'rest') return '#10b981'
+  return '#8b5cf6'
 })
 
 const timerContainerStyle = computed(() => {
-  // 计算原始元素的基础宽度和高度（假设是200px）
-  // 计算缩放后的尺寸
   const scaledSize = baseSize.value * timerSize.value
-
   return {
     width: `${scaledSize}px`,
     height: `${scaledSize}px`,
@@ -117,71 +133,64 @@ const timerContainerStyle = computed(() => {
   }
 })
 
-// Methods
-const setMode = (mode) => {
-  if (isRunning.value) {
-    clearInterval(timerInterval.value)
-    isRunning.value = false
-  }
+// 修改后的onEnd：遍历cycleList，遍历完毕后emit事件并重置序号
 
-  currentMode.value = mode
-  timeRemaining.value = modes[mode].duration
+// First add this function at the top level of the script setup
+const nextStage = () => {
+  if (currentCycleIndex.value < props.cycleList.length - 1) {
+    currentCycleIndex.value++
+  } else {
+    emit('cycleComplete')
+    console.log('Cycle complete!');
+
+    currentCycleIndex.value = 0
+  }
+  countdownRef.value?.restart()
+  isRunning.value = true
 }
+
+// Then modify the onEnd function to simply call nextStage
+const onEnd = () => {
+  nextStage()
+}
+
 
 const toggleTimer = () => {
   if (isRunning.value) {
-    clearInterval(timerInterval.value)
+    countdownRef.value?.pause()
     isRunning.value = false
   } else {
+    countdownRef.value?.start()
     isRunning.value = true
-    timerInterval.value = setInterval(() => {
-      if (timeRemaining.value > 0) {
-        timeRemaining.value--
-      } else {
-        clearInterval(timerInterval.value)
-        isRunning.value = false
-        // Play sound or notification here if needed
-      }
-    }, 1000)
   }
 }
 
 const resetTimer = () => {
-  clearInterval(timerInterval.value)
-  isRunning.value = false
-  timeRemaining.value = modes[currentMode.value].duration
+  countdownRef.value?.restart()
+  isRunning.value = true
 }
 
-const formatTime = (seconds) => {
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+const debugEndTimer = () => {
+  countdownRef.value?.pause()
+  onEnd()
 }
 
 const updateTimerSize = () => {
-  // Adjust timer size based on viewport to make it occupy most of the screen
   const viewportHeight = window.innerHeight
   const viewportWidth = window.innerWidth
   const minDimension = Math.min(viewportHeight, viewportWidth)
-
-  // Make timer size responsive - aim for 70-80% of the available space
   timerSize.value = (minDimension * 0.7) / 100
-  // Adjust stroke width based on timer size
   strokeWidth.value = timerSize.value * 0.7
 }
 
-// Set up responsive sizing
+// 响应式尺寸调整
 onMounted(() => {
   updateTimerSize()
   window.addEventListener('resize', updateTimerSize)
-
+  // nextStage()
 })
 
-// Clean up
 onBeforeUnmount(() => {
-  if (timerInterval.value) {
-    clearInterval(timerInterval.value)
-  }
   window.removeEventListener('resize', updateTimerSize)
 })
 </script>
