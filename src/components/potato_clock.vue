@@ -18,12 +18,12 @@
               type="circle"
               :percentage="
                 Math.round(
-                  (1 - totalMilliseconds / (props.cycleList[currentCycleIndex][0] *60* 1000)) *
+                  (1 - totalMilliseconds / (props.cycleList[currentCycleIndex][0] * 60 * 1000)) *
                     100,
                 )
               "
               :color="modeColor"
-                :rail-style="{ stroke: '#18181b' }"
+              rail-style="{ stroke: '#18181b' }"
               :stroke-width="strokeWidth"
               :style="`transform: scale(${timerSize});transform-origin: center center;`"
             >
@@ -40,31 +40,6 @@
       </div>
 
       <div class="controls-container">
-        <div class="mode-buttons">
-          <n-space>
-            <n-button
-              :type="currentModeLabel.toLowerCase() === 'focus' ? 'primary' : 'default'"
-              @click="currentCycleIndex = 0"
-              size="large"
-            >
-              Focus
-            </n-button>
-            <n-button
-              :type="currentModeLabel.toLowerCase() === 'rest' ? 'primary' : 'default'"
-              @click="currentCycleIndex = 1"
-              size="large"
-            >
-              Short Break
-            </n-button>
-            <n-button
-              :type="currentModeLabel.toLowerCase() === 'long' ? 'primary' : 'default'"
-              @click="currentCycleIndex = 2"
-              size="large"
-            >
-              Long Break
-            </n-button>
-          </n-space>
-        </div>
 
         <div class="timer-controls">
           <n-space>
@@ -91,14 +66,23 @@ import { NButton, NSpace, NProgress, NConfigProvider } from 'naive-ui'
 import { darkTheme } from 'naive-ui'
 import VueCountdown from '@chenfengyuan/vue-countdown'
 
-type CycleItem = [number, string];
+type CycleItem = [number, string]
 
 // 新增：从父组件接收cycleList，格式为 [[25, "focus"], [5, "rest"], [25, "focaus"]]
-const props = withDefaults(defineProps<{
-  cycleList: CycleItem[]
-}>(), {
-  cycleList: () => [[25, "focus"], [5, "rest"], [25, "focus"]]
-})
+const props = withDefaults(
+  defineProps<{
+    cycleList: CycleItem[]
+    infinite?: boolean
+  }>(),
+  {
+    cycleList: () => [
+      [25, 'focus'],
+      [5, 'rest'],
+      [25, 'focus'],
+    ],
+    infinite: false,
+  },
+)
 const emit = defineEmits(['cycleComplete'])
 
 // 新状态：使用cycleList进行周期遍历
@@ -137,13 +121,17 @@ const timerContainerStyle = computed(() => {
 
 // First add this function at the top level of the script setup
 const nextStage = () => {
-  if (currentCycleIndex.value < props.cycleList.length - 1) {
-    currentCycleIndex.value++
+  if (props.infinite) {
+    // 无限模式下在 focus 和 rest 之间切换
+    currentCycleIndex.value = currentCycleIndex.value === 0 ? 1 : 0
   } else {
-    emit('cycleComplete')
-    console.log('Cycle complete!');
-
-    currentCycleIndex.value = 0
+    if (currentCycleIndex.value < props.cycleList.length - 1) {
+      currentCycleIndex.value++
+    } else {
+      emit('cycleComplete')
+      console.log('Cycle complete!')
+      currentCycleIndex.value = 0
+    }
   }
   countdownRef.value?.restart()
   isRunning.value = true
@@ -154,14 +142,29 @@ const onEnd = () => {
   nextStage()
 }
 
-
 const toggleTimer = () => {
+  // 确保 countdownRef 不为 null
+  if (!countdownRef.value) {
+    console.warn('倒计时引用为空，无法控制计时器');
+    return;
+  }
+
   if (isRunning.value) {
-    countdownRef.value?.pause()
-    isRunning.value = false
+    try {
+      countdownRef.value.pause();
+      isRunning.value = false;
+      console.log('计时器已暂停');
+    } catch (error) {
+      console.error('暂停计时器失败:', error);
+    }
   } else {
-    countdownRef.value?.start()
-    isRunning.value = true
+    try {
+      countdownRef.value.start();
+      isRunning.value = true;
+      console.log('计时器已启动');
+    } catch (error) {
+      console.error('启动计时器失败:', error);
+    }
   }
 }
 
