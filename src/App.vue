@@ -1,12 +1,18 @@
 <script setup lang="ts">
-
+import { NMessageProvider } from 'naive-ui';
 import potato_clock from './components/potato_clock.vue';
 import misson_list from './components/misson_list.vue';
+import misson_l from './components/misson_l.vue';
+import transi_test from './components/transi_test.vue';
 </script>
 
 <template>
+<n-message-provider>
   <!-- <potato_clock  /> -->
-  <misson_list />
+  <!-- <misson_list /> -->
+   <!-- <misson_l /> -->
+  <transi_test />
+</n-message-provider>
   <!-- <header>
     <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
 
