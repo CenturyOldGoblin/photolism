@@ -4,14 +4,28 @@ import potato_clock from './components/potato_clock.vue';
 import misson_list from './components/misson_list.vue';
 import misson_l from './components/misson_l.vue';
 import transi_test from './components/transi_test.vue';
+import NintendoSwitchTransition from './components/NintendoSwitchTransition.vue';
+import { ref } from 'vue'
+import { defineExpose } from 'vue'
 </script>
 
 <template>
 <n-message-provider>
+  <NintendoSwitchTransition
+    ref="transitionRef"
+    class="full-screen"
+    :slotCount="2"
+  >
+    <template #slot1>
+      <misson_l />
+    </template>
+    <template #slot2>
+      <potato_clock  />
+    </template>
   <!-- <potato_clock  /> -->
   <!-- <misson_list /> -->
    <!-- <misson_l /> -->
-  <transi_test />
+</NintendoSwitchTransition>
 </n-message-provider>
   <!-- <header>
     <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
@@ -34,7 +48,13 @@ header {
   line-height: 1.5;
   max-height: 100vh;
 }
-
+.full-screen {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
 .logo {
   display: block;
   margin: 0 auto 2rem;

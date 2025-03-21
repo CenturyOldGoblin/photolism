@@ -71,7 +71,7 @@ type CycleItem = [number, string]
 // 新增：从父组件接收cycleList，格式为 [[25, "focus"], [5, "rest"], [25, "focaus"]]
 const props = withDefaults(
   defineProps<{
-    cycleList: CycleItem[]
+    cycleList?: CycleItem[]
     infinite?: boolean
   }>(),
   {
