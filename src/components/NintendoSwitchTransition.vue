@@ -50,7 +50,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { defineExpose } from 'vue'
 
@@ -71,7 +71,7 @@ const barSlidingIn = ref(false) // 新增：控制bars滑入动画
 // 新增：当前动画方向，用于 transitionTo 函数
 const currentDirection = ref(props.direction)
 
-function getOpposite(direction) {
+function getOpposite(direction : string) {
   switch (direction) {
     case 'left':
       return 'right'
@@ -107,7 +107,7 @@ watch(
   },
 )
 
-function startTransition(newVal) {
+function startTransition(newVal:number) {
   console.log('Start transition to', newVal)
   isTransitioning.value = true
   barSlidingIn.value = true // 触发滑入动画
@@ -129,7 +129,7 @@ function startTransition(newVal) {
 }
 
 // 新增：transitionTo 函数，指定动画方向和目标 view
-function transitionTo(type, targetView) {
+function transitionTo(type:string, targetView:number) {
   currentDirection.value = type
   console.log('TransitionTo:', type, targetView)
   isTransitioning.value = true

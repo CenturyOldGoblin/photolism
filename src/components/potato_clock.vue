@@ -1,11 +1,12 @@
 <template>
-  <n-config-provider :theme="darkTheme">
     <!-- <div class="fullscreen-container"> -->
     <div class="pomodoro-content">
       <!-- <div class="pomodoro-header">
           <h1 class="pomodoro-title">Pomodoro Timer</h1>
         </div> -->
-
+      <n-h1>
+        {{ config.task.name }}
+      </n-h1>
       <div class="timer-display">
         <div :style="timerContainerStyle">
           <vue-countdown
@@ -17,8 +18,8 @@
             <n-progress
               type="circle"
               :percentage="
-                Math.round(
-                  (1 - totalMilliseconds / (props.cycleList[currentCycleIndex][0] * 60 * 1000)) *
+                currentModeTime === 0 ? 100 : Math.round(
+                  (1 - totalMilliseconds / currentModeTime) *
                     100,
                 )
               "
@@ -28,26 +29,28 @@
               :style="`transform: scale(${timerSize});transform-origin: center center;`"
             >
               <div class="timer-text">
-                <span class="time"
+                <span class="time" v-if="!config.task.time_up"
                   >{{ minutes.toString().padStart(2, '0') }}:{{
                     seconds.toString().padStart(2, '0')
-                  }}</span
-                >
+                  }}</span>
+                  <div v-else>
+                    Complete!
+                  </div>
               </div>
+
             </n-progress>
           </vue-countdown>
         </div>
       </div>
 
       <div class="controls-container">
-
         <div class="timer-controls">
           <n-space>
             <n-button type="primary" size="large" @click="toggleTimer" class="control-button">
               {{ isRunning ? 'Pause' : 'Start' }}
             </n-button>
-            <n-button type="default" size="large" @click="resetTimer" class="control-button">
-              Reset
+            <n-button type="default" size="large" @click="()=>emit('quit', config.task)" class="control-button">
+              quit
             </n-button>
             <n-button type="default" size="large" @click="debugEndTimer" class="control-button">
               Debug End
@@ -57,48 +60,38 @@
       </div>
     </div>
     <!-- </div> -->
-  </n-config-provider>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
-import { NButton, NSpace, NProgress, NConfigProvider } from 'naive-ui'
-import { darkTheme } from 'naive-ui'
+import { ref, reactive, computed, onBeforeUnmount, onMounted } from 'vue'
+import { NButton, NSpace, NProgress,NH1 } from 'naive-ui'
 import VueCountdown from '@chenfengyuan/vue-countdown'
+import type { Task } from '@/utils/share_type'
+import { default_task } from '@/utils/share_type'
+// 删除原 props 定义，使用 config 代替
 
-type CycleItem = [number, string]
-
-// 新增：从父组件接收cycleList，格式为 [[25, "focus"], [5, "rest"], [25, "focaus"]]
-const props = withDefaults(
-  defineProps<{
-    cycleList?: CycleItem[]
-    infinite?: boolean
-  }>(),
-  {
-    cycleList: () => [
-      [25, 'focus'],
-      [5, 'rest'],
-      [25, 'focus'],
-    ],
-    infinite: false,
-  },
-)
-const emit = defineEmits(['cycleComplete'])
-
+const config = reactive({
+  task: default_task as Task,
+  infinite: false,
+})
+const emit = defineEmits<{
+  (event: 'quit', cur: Task): void
+  (event: 'cycleComplete'): void
+}>()
 // 新状态：使用cycleList进行周期遍历
-const currentCycleIndex = ref(0)
 const isRunning = ref(false)
-const timerSize = ref(2)
+const timerSize = ref(1.5)
 const strokeWidth = ref(5)
 const baseSize = ref(120)
 const countdownRef = ref<InstanceType<typeof VueCountdown> | null>(null)
 
 // 计算属性：当前周期时间（毫秒）、标签及颜色
 const currentModeTime = computed(() => {
-  // cycleList中第一个元素为分钟数
-  return props.cycleList[currentCycleIndex.value][0] * 60 * 1000
+  // Check if progress is within bounds
+    return config.task.cycleList[config.task.progress][0] * 60 * 1000;
+
 })
-const currentModeLabel = computed(() => props.cycleList[currentCycleIndex.value][1])
+const currentModeLabel = computed(() => config.task.cycleList[config.task.progress][1])
 const modeColor = computed(() => {
   const label = currentModeLabel.value.toLowerCase()
   if (label === 'focus' || label === 'focaus') return '#0ea5e9'
@@ -121,49 +114,55 @@ const timerContainerStyle = computed(() => {
 
 // First add this function at the top level of the script setup
 const nextStage = () => {
-  if (props.infinite) {
+  if (config.infinite) {
     // 无限模式下在 focus 和 rest 之间切换
-    currentCycleIndex.value = currentCycleIndex.value === 0 ? 1 : 0
+    config.task.progress = config.task.progress === 0 ? 1 : 0
   } else {
-    if (currentCycleIndex.value < props.cycleList.length - 1) {
-      currentCycleIndex.value++
+    config.task.progress++
+    if (config.task.progress <= config.task.cycleList.length - 2) {
+      countdownRef.value?.restart()
+    isRunning.value = true
     } else {
-      emit('cycleComplete')
+      // emit('cycleComplete')
+      config.task.time_up = true
+      emit('quit', config.task)
       console.log('Cycle complete!')
-      currentCycleIndex.value = 0
+      // config.task.progress = 0
     }
+
+
   }
-  countdownRef.value?.restart()
-  isRunning.value = true
+
 }
 
 // Then modify the onEnd function to simply call nextStage
 const onEnd = () => {
   nextStage()
+
 }
 
 const toggleTimer = () => {
   // 确保 countdownRef 不为 null
   if (!countdownRef.value) {
-    console.warn('倒计时引用为空，无法控制计时器');
-    return;
+    console.warn('倒计时引用为空，无法控制计时器')
+    return
   }
 
   if (isRunning.value) {
     try {
-      countdownRef.value.pause();
-      isRunning.value = false;
-      console.log('计时器已暂停');
+      countdownRef.value.pause()
+      isRunning.value = false
+      console.log('计时器已暂停')
     } catch (error) {
-      console.error('暂停计时器失败:', error);
+      console.error('暂停计时器失败:', error)
     }
   } else {
     try {
-      countdownRef.value.start();
-      isRunning.value = true;
-      console.log('计时器已启动');
+      countdownRef.value.start()
+      isRunning.value = true
+      console.log('计时器已启动')
     } catch (error) {
-      console.error('启动计时器失败:', error);
+      console.error('启动计时器失败:', error)
     }
   }
 }
@@ -182,7 +181,7 @@ const updateTimerSize = () => {
   const viewportHeight = window.innerHeight
   const viewportWidth = window.innerWidth
   const minDimension = Math.min(viewportHeight, viewportWidth)
-  timerSize.value = (minDimension * 0.7) / 100
+  timerSize.value = (minDimension * 0.6) / 100
   strokeWidth.value = timerSize.value * 0.7
 }
 
@@ -196,6 +195,13 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updateTimerSize)
 })
+
+// 新增 setConfig 函数并暴露给外部
+const setConfig = (newConfig: Partial<{ task: Task; infinite: boolean }>) => {
+  Object.assign(config, newConfig)
+}
+
+defineExpose({ setConfig, resetTimer })
 </script>
 
 <style scoped>

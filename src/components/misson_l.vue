@@ -76,40 +76,62 @@
 
       <!-- 未完成任务列表 -->
       <n-infinite-scroll class="task-list">
-        <n-card
-        v-for="task in uncompletedTasks"
+        <n-flex v-for="task in uncompletedTasks"
         :key="task.id"
         class="task-item"
-        embedded
         >
-        <n-thing>
-          <template #header>
-            <n-text>{{ task.name }}</n-text>
-            <!-- <div class="task-checkbox" @click="toggleTaskStatus(task.id)">
-              <n-icon v-if="!task.completed"><ellipse-outline /></n-icon>
-              <n-icon v-else class="completed"><checkmark-circle /></n-icon>
-            </div> -->
+        <n-button size="small" @click="toggleTaskStatus(task.id)" type="success" >
+          <template #icon>
+            <n-icon><checkmark-outline /></n-icon>
           </template>
-          <template #default>
-            <div class="task-details">
-              <span class="task-time">预估: {{ task.estimatedTime }}小时</span>
-              <span class="task-deadline">截止: {{ formatDate(task.deadline) }}</span>
-            </div>
-          </template>
-          <template  #action>
-            <n-button   size="small" @click="deleteTask(task.id)" type="success">
-              <template #icon>
-                <n-icon><checkmark-outline /></n-icon>
-              </template>
-            </n-button>
-            <!-- <n-button quaternary circle size="small">
+        </n-button>
+        <n-card
+          :hoverable="true"
+          @click="onTaskClick(task)"
+          style="width;"
+        >
+          <n-thing>
+            <template #header>
+              <n-h3 prefix="bar" align-text>
+                <n-text type="">
+                  {{ task.name }}
+                </n-text>
+              </n-h3>
+            </template>
+            <template #default>
+              <n-flex vertical>
+                <span class="task-time"
+                  ><n-text strong>{{ task.estimatedTime }}</n-text> h</span
+                >
+                <span class="task-deadline" v-if="task.deadline">{{
+                  formatDate(task.deadline)
+                }}</span>
+
+                <n-flex :size="3">
+                  <span
+                    v-for="(cycle, idx) in task.cycleList.slice(0, -1)"
+                    :key="idx"
+                    :style="boxStyle(task, cycle[1], idx)"
+                  />
+                </n-flex>
+              </n-flex>
+            </template>
+            <template #action>
+              <n-button size="small" @click="toggleTaskStatus(task.id)" type="success">
+                <template #icon>
+                  <n-icon><checkmark-outline /></n-icon>
+                </template>
+              </n-button>
+              <!-- <n-button quaternary circle size="small">
               <template #icon>
                 <n-icon><star-outline /></n-icon>
               </template>
             </n-button> -->
-          </template>
-        </n-thing>
-      </n-card>
+            </template>
+          </n-thing>
+        </n-card>
+        </n-flex>
+
       </n-infinite-scroll>
 
       <!-- 已完成任务区域 -->
@@ -185,8 +207,9 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
+import { defineEmits, defineProps } from 'vue'
 import {
   NButton,
   NSpace,
@@ -202,120 +225,135 @@ import {
   NCard,
   NThing,
   NText,
+  NFlex,
+  NH3,
 } from 'naive-ui'
-import {
-  SearchOutline,
-  SunnyOutline,
-  StarOutline,
-  CalendarOutline,
-  PersonOutline,
-  MailOutline,
-  HomeOutline,
-  EllipseOutline,
-  CheckmarkCircle,
-  AddOutline,
-  TrashOutline,
-  CheckmarkOutline,
-  ChevronDownOutline,
-  EllipsisHorizontal,
-  PersonAddOutline,
-  ImageOutline,
-} from '@vicons/ionicons5'
+import { AddOutline, CheckmarkOutline } from '@vicons/ionicons5'
+import type { CycleItem, Task } from '@/utils/share_type'
+
+// 修改：使用 v-model 传入 tasks
+const props = defineProps<{
+  tasks: Task[]
+}>()
+const emit = defineEmits(['taskClick', 'update:tasks'])
+// 定义双向绑定 tasks
+const tasksModel = computed({
+  get: () => props.tasks,
+  set: (val: Task[]) => emit('update:tasks', val),
+})
 
 // 消息提示
 const message = useMessage()
 
-// 任务列表
-const tasks = ref([])
+// 修改计算属性，基于 tasksModel 过滤
+const uncompletedTasks = computed(() => {
+  return tasksModel.value.filter((task) => !task.completed)
+})
+const completedTasks = computed(() => {
+  return tasksModel.value.filter((task) => task.completed)
+})
 
-// 搜索文本
-const searchText = ref('')
-
-// 显示已完成任务
-const showCompleted = ref(true)
-
-// 表单引用
+// 表单相关代码
 const formRef = ref(null)
-
-// 控制弹窗显示
 const showModal = ref(false)
-
-// 新任务表单数据
-const newTask = reactive({
+interface NewTask {
+  name: string
+  estimatedTime: number
+  deadline: number | null
+}
+const newTask = reactive<NewTask>({
   name: '',
   estimatedTime: 1,
   deadline: null,
 })
 
-// 计算未完成的任务
-const uncompletedTasks = computed(() => {
-  return tasks.value.filter((task) => !task.completed)
-})
-
-// 计算已完成的任务
-const completedTasks = computed(() => {
-  return tasks.value.filter((task) => task.completed)
-})
-
-// 表单验证规则
+// 新增：补充 form 的校验规则
 const rules = {
   name: {
     required: true,
-    message: '请输入任务名称',
+    message: '任务名称不能为空',
     trigger: 'blur',
   },
   estimatedTime: {
     required: true,
-    message: '请输入预估时间',
-    trigger: 'blur',
-  },
-  deadline: {
-    required: true,
-    message: '请选择截止日期',
+    message: '预估时间不能为空',
     trigger: 'blur',
   },
 }
 
-// 格式化日期
-const formatDate = (timestamp) => {
-  if (!timestamp) return '未设置'
-  const date = new Date(timestamp)
-  return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
-}
-
-// 添加任务
+// 修改：添加任务操作，从 tasksModel 更新任务数组（避免直接修改 props）
 const addTask = () => {
-  const task = {
+  const task: Task = {
     id: Date.now(),
     name: newTask.name,
     estimatedTime: newTask.estimatedTime,
     deadline: newTask.deadline,
     completed: false,
+    cycleList: [],
+    progress: 0,
+    time_up: false,
   }
-
-  tasks.value.push(task)
+  let min = task.estimatedTime * 60
+  const timeArrange: CycleItem[] = []
+  while (min > 0) {
+    if (min >= 30) {
+      timeArrange.push([25, 'focus'])
+      timeArrange.push([5, 'rest'])
+      min -= 30
+    } else {
+      timeArrange.push([min, 'focus'])
+      min = 0
+    }
+  }
+  task.cycleList = timeArrange.concat([[0, 'end']])
+  tasksModel.value = [...tasksModel.value, task]
   message.success('任务添加成功')
   showModal.value = false
-
   // 重置表单
   newTask.name = ''
   newTask.estimatedTime = 1
   newTask.deadline = null
 }
 
-// 切换任务状态
-const toggleTaskStatus = (id) => {
-  const task = tasks.value.find((task) => task.id === id)
-  if (task) {
-    task.completed = !task.completed
-    message.info(task.completed ? '任务已完成' : '任务已重新激活')
-  }
+const toggleTaskStatus = (id: number) => {
+  const updated = tasksModel.value.map((task) => {
+    if (task.id === id) {
+      return { ...task, completed: !task.completed }
+    }
+    return task
+  })
+  tasksModel.value = updated
+  const target = updated.find((task) => task.id === id)
+  message.info(target?.completed ? '任务已完成' : '任务已重新激活')
 }
 
-// 删除任务
-const deleteTask = (id) => {
-  tasks.value = tasks.value.filter((task) => task.id !== id)
+const deleteTask = (id: number) => {
+  tasksModel.value = tasksModel.value.filter((task) => task.id !== id)
   message.success('任务已删除')
+}
+
+const formatDate = (timestamp: number | null): string => {
+  if (!timestamp) return '未设置'
+  const date = new Date(timestamp)
+  return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
+}
+
+const onTaskClick = (task: Task): void => {
+  emit('taskClick', task)
+}
+
+const boxStyle = (task: Task, cycleType: string, index: number) => {
+  const fillColor = cycleType === 'focus' ? 'orange' : 'green'
+  const isFilled = task.progress > index
+  return {
+    display: 'inline-block',
+    width: '10px',
+    height: '10px',
+    marginRight: '4px',
+    borderRadius: '2px',
+    backgroundColor: isFilled ? fillColor : 'transparent',
+    border: `1px solid ${fillColor}`,
+  }
 }
 </script>
 
@@ -452,12 +490,6 @@ const deleteTask = (id) => {
   margin-bottom: 4px;
 }
 
-.task-details {
-  font-size: 18px;
-  display: flex;
-  gap: 12px;
-}
-
 .task-actions {
   display: flex;
   gap: 4px;
@@ -509,5 +541,13 @@ const deleteTask = (id) => {
 
 .add-task i {
   margin-right: 8px;
+}
+
+.cycle-box {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  border-radius: 2px;
 }
 </style>

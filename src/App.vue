@@ -1,32 +1,65 @@
 <script setup lang="ts">
-import { NMessageProvider } from 'naive-ui';
-import potato_clock from './components/potato_clock.vue';
-import misson_list from './components/misson_list.vue';
-import misson_l from './components/misson_l.vue';
-import transi_test from './components/transi_test.vue';
-import NintendoSwitchTransition from './components/NintendoSwitchTransition.vue';
-import { ref } from 'vue'
-import { defineExpose } from 'vue'
+import { NMessageProvider, NConfigProvider, darkTheme,NGlobalStyle } from 'naive-ui'
+import { onMounted, ref } from 'vue'
+import potato_clock from './components/potato_clock.vue'
+import misson_l from './components/misson_l.vue'
+import NintendoSwitchTransition from './components/NintendoSwitchTransition.vue'
+import type { Task } from '@/utils/share_type'
+import { default_task } from '@/utils/share_type'
+import hover_card from './components/hover_card.vue'
+const transitionRef = ref<InstanceType<typeof NintendoSwitchTransition>>()
+const clockRef = ref<InstanceType<typeof potato_clock>>()
+// 新增：全局任务列表
+
+const tasks = ref<Task[]>([ default_task])
+const task_start = (task: Task) => {
+  console.log(task.name)
+  clockRef.value?.setConfig({ task: task, infinite: false })
+  transitionRef.value?.transitionTo('right', 2)
+  clockRef.value?.resetTimer()
+}
+const task_quit = (task : Task) => {
+  //check complete
+  if (task.progress == task.cycleList.length - 1) {
+    //complete
+    console.log('complete')
+    transitionRef.value?.transitionTo('left', 1)
+  } else {
+    //quit
+    console.log('quit')
+    transitionRef.value?.transitionTo('left', 1)
+
+  }
+}
+onMounted(() => {
+  transitionRef.value?.transitionTo('right', 3)
+  console.log('App mounted!')
+})
+// 新增：全局传递 theme 到所有组件
 </script>
 
 <template>
-<n-message-provider>
-  <NintendoSwitchTransition
-    ref="transitionRef"
-    class="full-screen"
-    :slotCount="2"
-  >
-    <template #slot1>
-      <misson_l />
-    </template>
-    <template #slot2>
-      <potato_clock  />
-    </template>
-  <!-- <potato_clock  /> -->
-  <!-- <misson_list /> -->
-   <!-- <misson_l /> -->
-</NintendoSwitchTransition>
-</n-message-provider>
+  <n-config-provider :theme="darkTheme">
+    <!-- 新增：使用暗黑主题 -->
+    <n-message-provider>
+      <NintendoSwitchTransition ref="transitionRef" class="full-screen" :slotCount="5">
+        <template #slot1>
+          <!-- 修改：通过 v-model:tasks 双向绑定任务 -->
+          <misson_l v-model:tasks="tasks" @taskClick="task_start" />
+        </template>
+        <template #slot2>
+          <potato_clock ref="clockRef" @quit="task_quit"/>
+        </template>
+        <template #slot3>
+          <hover_card style="height:100%"/>
+        </template>
+        <!-- <potato_clock  /> -->
+        <!-- <misson_list /> -->
+        <!-- <misson_l /> -->
+      </NintendoSwitchTransition>
+    </n-message-provider>
+    <NGlobalStyle />
+  </n-config-provider>
   <!-- <header>
     <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
 
