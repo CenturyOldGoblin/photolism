@@ -76,16 +76,55 @@
 
       <!-- 未完成任务列表 -->
       <n-infinite-scroll class="task-list">
-        <n-flex v-for="task in uncompletedTasks"
+
+        <hover_card
+        v-for="task in uncompletedTasks"
         :key="task.id"
-        class="task-item"
+      
         >
-        <n-button size="small" @click="toggleTaskStatus(task.id)" type="success" >
-          <template #icon>
-            <n-icon><checkmark-outline /></n-icon>
+          <template #card>
+            <n-card
+            :hoverable="true"
+            @click="onTaskClick(task)"
+          >
+            <n-thing>
+              <template #header>
+                <n-h3 prefix="bar" align-text>
+                  <n-text type="">
+                    {{ task.name }}
+                  </n-text>
+                </n-h3>
+              </template>
+              <template #default>
+                <n-flex vertical>
+                  <span class="task-time"
+                    ><n-text strong>{{ task.estimatedTime }}</n-text> h</span
+                  >
+                  <span class="task-deadline" v-if="task.deadline">{{
+                    formatDate(task.deadline)
+                  }}</span>
+
+                  <n-flex :size="3">
+                    <span
+                      v-for="(cycle, idx) in task.cycleList.slice(0, -1)"
+                      :key="idx"
+                      :style="boxStyle(task, cycle[1], idx)"
+                    />
+                  </n-flex>
+                </n-flex>
+              </template>
+              <template #action>
+                <n-button size="small" @click="toggleTaskStatus(task.id)" type="success">
+                  <template #icon>
+                    <n-icon><checkmark-outline /></n-icon>
+                  </template>
+                </n-button>
+              </template>
+            </n-thing>
+          </n-card>
           </template>
-        </n-button>
-        <n-card
+        </hover_card>
+        <!-- <n-card
           :hoverable="true"
           @click="onTaskClick(task)"
           style="width;"
@@ -122,15 +161,11 @@
                   <n-icon><checkmark-outline /></n-icon>
                 </template>
               </n-button>
-              <!-- <n-button quaternary circle size="small">
-              <template #icon>
-                <n-icon><star-outline /></n-icon>
-              </template>
+
             </n-button> -->
-            </template>
-          </n-thing>
-        </n-card>
-        </n-flex>
+            <!-- </template> -->
+          <!-- </n-thing>
+        </n-card> -->
 
       </n-infinite-scroll>
 
@@ -230,7 +265,7 @@ import {
 } from 'naive-ui'
 import { AddOutline, CheckmarkOutline } from '@vicons/ionicons5'
 import type { CycleItem, Task } from '@/utils/share_type'
-
+import hover_card from './hover_card.vue'
 // 修改：使用 v-model 传入 tasks
 const props = defineProps<{
   tasks: Task[]
@@ -469,6 +504,7 @@ const boxStyle = (task: Task, cycleType: string, index: number) => {
 
 .task-list {
   padding: 0 24px;
+  width: 100%;
 }
 
 .task-item {

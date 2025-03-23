@@ -32,7 +32,7 @@ const task_quit = (task : Task) => {
   }
 }
 onMounted(() => {
-  transitionRef.value?.transitionTo('right', 3)
+  transitionRef.value?.transitionTo('right', 1)
   console.log('App mounted!')
 })
 // 新增：全局传递 theme 到所有组件

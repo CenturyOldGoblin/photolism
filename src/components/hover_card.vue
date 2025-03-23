@@ -1,28 +1,22 @@
 <template>
   <div class="card-container">
-    <!-- 将鼠标事件监听器移到外层包装器上 -->
-    <div
-      class="card-wrapper"
-      @mouseenter="isHovered = true"
-      @mouseleave="isHovered = false"
-    >
-      <n-card class="hover-card">
-        <template #header>
-          <div class="card-title">卡片标题</div>
-        </template>
-        <div class="card-content">
-          这是一个居中显示的卡片，当鼠标悬浮时会从右侧展开操作按钮。
-        </div>
-        <template #footer>
-          <div class="card-footer">最后更新：今天</div>
-        </template>
-      </n-card>
+    <!-- 使用一个不可见的包装器来扩展悬浮区域 -->
+    <div class="hover-area" @mouseenter="isHovered = true" @mouseleave="isHovered = false">
+      <!-- 允许外部通过具名插槽传入整个卡片 -->
+      <slot name="card">
+        <n-card :class="['hover-card', props.cardClass]">
+          <template #header>
+            <div class="card-title">卡片标题</div>
+          </template>
+          <div class="card-content">这是一个居中显示的卡片，当鼠标悬浮时会从右侧展开操作按钮。</div>
+          <template #footer>
+            <div class="card-footer">最后更新：今天</div>
+          </template>
+        </n-card>
+      </slot>
 
-      <!-- 按钮容器不再使用v-if条件渲染整个容器 -->
-      <div
-        class="action-buttons"
-        :class="{ 'buttons-visible': isHovered }"
-      >
+      <!-- 按钮容器绝对定位在卡片右侧 -->
+      <div class="action-buttons" :class="{ 'buttons-visible': isHovered }">
         <n-button circle secondary class="action-button">
           <template #icon>
             <n-icon><EditOutlined /></n-icon>
@@ -48,15 +42,18 @@
   </div>
 </template>
 
-<script setup>
-import { ref } from 'vue'
+<script setup lang="ts">
+import { ref, type ComputedRef, type PropType } from 'vue'
 import { NCard, NButton, NIcon } from 'naive-ui'
-import {
-  EditOutlined,
-  ShareAltOutlined,
-  DeleteOutlined,
-  MoreOutlined
-} from '@vicons/antd'
+import { EditOutlined, ShareAltOutlined, DeleteOutlined, MoreOutlined } from '@vicons/antd'
+
+// 修改：允许 cardClass 接受 computed 属性
+const props = defineProps({
+  cardClass: {
+    type: [String, Object] as PropType<string | ComputedRef<string>>,
+    default: '',
+  },
+})
 
 const isHovered = ref(false)
 </script>
@@ -66,18 +63,17 @@ const isHovered = ref(false)
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
 }
 
-.card-wrapper {
+/* 悬浮区域包含卡片和按钮，但不影响布局 */
+.hover-area {
   position: relative;
-  /* 添加内边距确保按钮区域包含在鼠标事件区域内 */
-  padding-right: 60px;
+  display: inline-block; /* 使元素宽度适应内容 */
 }
 
 .hover-card {
-  width: 320px;
   transition: all 0.3s;
+  /* 卡片本身不需要特殊定位，保持正常流布局 */
 }
 
 .card-title {
@@ -97,12 +93,13 @@ const isHovered = ref(false)
 .action-buttons {
   position: absolute;
   top: 0;
-  right: 0;
+  left: 100%; /* 定位在卡片右侧 */
   height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 8px;
+  padding-left: 8px; /* 与卡片保持一定距离 */
   transition: all 0.3s;
   opacity: 0;
   transform: translateX(-20px);
@@ -123,4 +120,3 @@ const isHovered = ref(false)
   transform: scale(1.1);
 }
 </style>
-
