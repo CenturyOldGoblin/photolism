@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { NMessageProvider, NConfigProvider, darkTheme,NGlobalStyle } from 'naive-ui'
-import { onMounted, ref } from 'vue'
+import { NMessageProvider, NConfigProvider, darkTheme, NGlobalStyle } from 'naive-ui'
+import { onMounted, ref, watch } from 'vue'
 import potato_clock from './components/potato_clock.vue'
 import misson_l from './components/misson_l.vue'
 import NintendoSwitchTransition from './components/NintendoSwitchTransition.vue'
@@ -11,9 +11,29 @@ const transitionRef = ref<InstanceType<typeof NintendoSwitchTransition>>()
 const clockRef = ref<InstanceType<typeof potato_clock>>()
 const clockKey = ref(0)
 
-// 新增：全局任务列表
+// 加载保存的任务数据或使用默认值
+const loadTasks = (): Task[] => {
+  const savedTasks = localStorage.getItem('potato_tasks')
+  return savedTasks ? JSON.parse(savedTasks) : [default_task]
+}
 
-const tasks = ref<Task[]>([ default_task])
+// 全局任务列表
+const tasks = ref<Task[]>(loadTasks())
+
+// 监听任务变化，保存到localStorage
+watch(
+  tasks,
+  (newTasks) => {
+    localStorage.setItem('potato_tasks', JSON.stringify(newTasks))
+  },
+  { deep: true },
+)
+
+// 在窗口关闭或刷新前保存数据
+window.addEventListener('beforeunload', () => {
+  localStorage.setItem('potato_tasks', JSON.stringify(tasks.value))
+})
+
 const task_start = (task: Task) => {
   console.log('Task 全部信息:', JSON.stringify(task, null, 2))
 
@@ -22,7 +42,8 @@ const task_start = (task: Task) => {
   transitionRef.value?.transitionTo('right', 2)
   clockRef.value?.resetTimer()
 }
-const task_quit = (task : Task) => {
+
+const task_quit = (task: Task) => {
   //check complete
   if (task.progress == task.cycleList.length - 1) {
     //complete
@@ -32,18 +53,20 @@ const task_quit = (task : Task) => {
     //quit
     console.log('quit')
     transitionRef.value?.transitionTo('left', 1)
-
   }
+
+  // 保存当前状态
+  localStorage.setItem('potato_tasks', JSON.stringify(tasks.value))
 }
+
 function restartClock() {
-  // 改变 key 值，强制 Vue 重新渲染组件
   clockKey.value++
 }
-onMounted(() => {
-  transitionRef.value?.transitionTo('right', 1)
-  console.log('App mounted!')
-})
-// 新增：全局传递 theme 到所有组件
+
+// onMounted(() => {
+//   transitionRef.value?.transitionTo('right', 1)
+//   console.log('App mounted!')
+// })
 </script>
 
 <template>
@@ -59,7 +82,7 @@ onMounted(() => {
           <potato_clock ref="clockRef" @quit="task_quit" />
         </template>
         <template #slot3>
-          <hover_card style="height:100%"/>
+          <hover_card style="height: 100%" />
         </template>
         <!-- <potato_clock  /> -->
         <!-- <misson_list /> -->
