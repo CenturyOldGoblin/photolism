@@ -1,56 +1,70 @@
 <template>
   <div class="card-container">
-    <!-- 使用一个不可见的包装器来扩展悬浮区域 -->
-    <div class="hover-area" @mouseenter="isHovered = true" @mouseleave="isHovered = false">
-      <!-- 允许外部通过具名插槽传入整个卡片 -->
-      <slot name="card">
-        <n-card :class="['hover-card', props.cardClass]">
-          <template #header>
-            <div class="card-title">卡片标题</div>
-          </template>
-          <div class="card-content">这是一个居中显示的卡片，当鼠标悬浮时会从右侧展开操作按钮。</div>
-          <template #footer>
-            <div class="card-footer">最后更新：今天</div>
-          </template>
-        </n-card>
-      </slot>
+    <!-- 提供整个hover-area的插槽 -->
 
-      <!-- 按钮容器绝对定位在卡片右侧 -->
-      <div class="action-buttons" :class="{ 'buttons-visible': isHovered }">
-        <n-button circle secondary class="action-button">
-          <template #icon>
-            <n-icon><EditOutlined /></n-icon>
-          </template>
-        </n-button>
-        <n-button circle secondary class="action-button">
-          <template #icon>
-            <n-icon><ShareAltOutlined /></n-icon>
-          </template>
-        </n-button>
-        <n-button circle secondary class="action-button">
-          <template #icon>
-            <n-icon><DeleteOutlined /></n-icon>
-          </template>
-        </n-button>
-        <n-button circle secondary class="action-button">
-          <template #icon>
-            <n-icon><MoreOutlined /></n-icon>
-          </template>
-        </n-button>
+      <!-- 默认的hover-area实现 -->
+      <div
+        class="hover-area"
+        @mouseenter="isHovered = true"
+        @mouseleave="isHovered = false"
+        :style="props.cardClass"
+        >
+        <!-- 允许外部通过具名插槽传入整个卡片 -->
+        <slot name="card">
+          <n-card class="hover-card">
+            <template #header>
+              <div class="card-title">卡片标题</div>
+            </template>
+            <div class="card-content">
+              这是一个居中显示的卡片，当鼠标悬浮时会从右侧展开操作按钮。
+            </div>
+            <template #footer>
+              <div class="card-footer">最后更新：今天</div>
+            </template>
+          </n-card>
+        </slot>
+
+        <!-- 按钮容器绝对定位在卡片右侧 -->
+        <div class="action-buttons" :class="{ 'buttons-visible': isHovered }">
+          <slot
+            name="hover-area"
+          >
+          <n-button circle secondary class="action-button">
+            <template #icon>
+              <n-icon><EditOutlined /></n-icon>
+            </template>
+          </n-button>
+          <n-button circle secondary class="action-button">
+            <template #icon>
+              <n-icon><ShareAltOutlined /></n-icon>
+            </template>
+          </n-button>
+          <n-button circle secondary class="action-button">
+            <template #icon>
+              <n-icon><DeleteOutlined /></n-icon>
+            </template>
+          </n-button>
+          <n-button circle secondary class="action-button">
+            <template #icon>
+              <n-icon><MoreOutlined /></n-icon>
+            </template>
+          </n-button>
+        </slot>
+        </div>
       </div>
-    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, type ComputedRef, type PropType } from 'vue'
+import { ref, type ComputedRef, type PropType, type StyleValue } from 'vue'
 import { NCard, NButton, NIcon } from 'naive-ui'
 import { EditOutlined, ShareAltOutlined, DeleteOutlined, MoreOutlined } from '@vicons/antd'
 
 // 修改：允许 cardClass 接受 computed 属性
 const props = defineProps({
   cardClass: {
-    type: [String, Object] as PropType<string | ComputedRef<string>>,
+    type: [String, Object,] as PropType<StyleValue | ComputedRef<string>>,
     default: '',
   },
 })
@@ -96,8 +110,7 @@ const isHovered = ref(false)
   left: 100%; /* 定位在卡片右侧 */
   height: 100%;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+
   gap: 8px;
   padding-left: 8px; /* 与卡片保持一定距离 */
   transition: all 0.3s;

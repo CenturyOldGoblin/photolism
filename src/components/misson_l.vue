@@ -76,97 +76,53 @@
 
       <!-- 未完成任务列表 -->
       <n-infinite-scroll class="task-list">
-
-        <hover_card
-        v-for="task in uncompletedTasks"
-        :key="task.id"
-      
-        >
+        <hover_card v-for="task in uncompletedTasks" :key="task.id" :cardClass="cardStyle">
           <template #card>
-            <n-card
-            :hoverable="true"
-            @click="onTaskClick(task)"
-          >
-            <n-thing>
-              <template #header>
-                <n-h3 prefix="bar" align-text>
-                  <n-text type="">
-                    {{ task.name }}
-                  </n-text>
-                </n-h3>
-              </template>
-              <template #default>
-                <n-flex vertical>
-                  <span class="task-time"
-                    ><n-text strong>{{ task.estimatedTime }}</n-text> h</span
-                  >
-                  <span class="task-deadline" v-if="task.deadline">{{
-                    formatDate(task.deadline)
-                  }}</span>
+            <n-card :hoverable="true" @click="onTaskClick(task)">
+              <n-thing>
+                <template #header>
+                  <n-h3 prefix="bar" align-text>
+                    <n-text type="">
+                      {{ task.name }}
+                    </n-text>
+                  </n-h3>
+                </template>
+                <template #default>
+                  <n-flex vertical>
+                    <span class="task-time"
+                      ><n-text strong>{{ task.estimatedTime }}</n-text> h</span
+                    >
+                    <span class="task-deadline" v-if="task.deadline">{{
+                      formatDate(task.deadline)
+                    }}</span>
 
-                  <n-flex :size="3">
-                    <span
-                      v-for="(cycle, idx) in task.cycleList.slice(0, -1)"
-                      :key="idx"
-                      :style="boxStyle(task, cycle[1], idx)"
-                    />
+                    <n-flex :size="3">
+                      <span
+                        v-for="(cycle, idx) in task.cycleList.slice(0, -1)"
+                        :key="idx"
+                        :style="boxStyle(task, cycle[1], idx)"
+                      />
+                    </n-flex>
                   </n-flex>
-                </n-flex>
-              </template>
-              <template #action>
-                <n-button size="small" @click="toggleTaskStatus(task.id)" type="success">
-                  <template #icon>
-                    <n-icon><checkmark-outline /></n-icon>
-                  </template>
-                </n-button>
-              </template>
-            </n-thing>
-          </n-card>
+                </template>
+              </n-thing>
+            </n-card>
           </template>
-        </hover_card>
-        <!-- <n-card
-          :hoverable="true"
-          @click="onTaskClick(task)"
-          style="width;"
-        >
-          <n-thing>
-            <template #header>
-              <n-h3 prefix="bar" align-text>
-                <n-text type="">
-                  {{ task.name }}
-                </n-text>
-              </n-h3>
-            </template>
-            <template #default>
-              <n-flex vertical>
-                <span class="task-time"
-                  ><n-text strong>{{ task.estimatedTime }}</n-text> h</span
-                >
-                <span class="task-deadline" v-if="task.deadline">{{
-                  formatDate(task.deadline)
-                }}</span>
-
-                <n-flex :size="3">
-                  <span
-                    v-for="(cycle, idx) in task.cycleList.slice(0, -1)"
-                    :key="idx"
-                    :style="boxStyle(task, cycle[1], idx)"
-                  />
-                </n-flex>
-              </n-flex>
-            </template>
-            <template #action>
-              <n-button size="small" @click="toggleTaskStatus(task.id)" type="success">
+          <template #hover-area>
+            <n-flex vertical justify="space-around">
+              <n-button size="large" type="success" @click="toggleTaskStatus(task.id)">
                 <template #icon>
                   <n-icon><checkmark-outline /></n-icon>
                 </template>
               </n-button>
-
-            </n-button> -->
-            <!-- </template> -->
-          <!-- </n-thing>
-        </n-card> -->
-
+              <n-button size="large" strong secondary type="info" @click="SetTaskInfo(task.id)">
+                <template #icon>
+                  <n-icon><settings-outline /></n-icon>
+                </template>
+              </n-button>
+            </n-flex>
+          </template>
+        </hover_card>
       </n-infinite-scroll>
 
       <!-- 已完成任务区域 -->
@@ -239,6 +195,38 @@
         </n-space>
       </n-form>
     </n-modal>
+
+    <!-- 编辑任务弹窗 -->
+    <n-modal v-model:show="showEditModal" preset="card" title="编辑任务" style="width: 500px">
+      <n-form ref="editFormRef" :model="editingTask" :rules="rules">
+        <n-form-item label="任务名称" path="name">
+          <n-input v-model:value="editingTask.name" placeholder="请输入任务名称" />
+        </n-form-item>
+
+        <n-form-item label="预估时间 (小时)" path="estimatedTime">
+          <n-input-number
+            v-model:value="editingTask.estimatedTime"
+            :min="0.5"
+            :step="0.5"
+            placeholder="请输入预估时间"
+          />
+        </n-form-item>
+
+        <n-form-item label="截止日期" path="deadline">
+          <n-date-picker
+            v-model:value="editingTask.deadline"
+            type="datetime"
+            clearable
+            placeholder="请选择截止日期"
+          />
+        </n-form-item>
+
+        <n-space justify="end">
+          <n-button @click="showEditModal = false">取消</n-button>
+          <n-button type="primary" @click="updateTask">保存</n-button>
+        </n-space>
+      </n-form>
+    </n-modal>
   </div>
 </template>
 
@@ -263,7 +251,7 @@ import {
   NFlex,
   NH3,
 } from 'naive-ui'
-import { AddOutline, CheckmarkOutline } from '@vicons/ionicons5'
+import { AddOutline, CheckmarkOutline, SettingsOutline } from '@vicons/ionicons5'
 import type { CycleItem, Task } from '@/utils/share_type'
 import hover_card from './hover_card.vue'
 // 修改：使用 v-model 传入 tasks
@@ -389,6 +377,84 @@ const boxStyle = (task: Task, cycleType: string, index: number) => {
     backgroundColor: isFilled ? fillColor : 'transparent',
     border: `1px solid ${fillColor}`,
   }
+}
+const cardStyle = {
+  width: '40%',
+}
+
+// 编辑任务模态框
+const showEditModal = ref(false)
+const editFormRef = ref(null)
+const editingTask = reactive<Task>({
+  id: 0,
+  name: '',
+  estimatedTime: 1,
+  deadline: null,
+  completed: false,
+  cycleList: [],
+  progress: 0,
+  time_up: false,
+})
+const editingTaskId = ref<number | null>(null)
+
+// 实现 SetTaskInfo 函数
+const SetTaskInfo = (id: number) => {
+  const task = tasksModel.value.find((task) => task.id === id)
+  if (task) {
+    // 深拷贝任务数据到编辑状态
+    editingTaskId.value = id
+    editingTask.id = task.id
+    editingTask.name = task.name
+    editingTask.estimatedTime = task.estimatedTime
+    editingTask.deadline = task.deadline
+    editingTask.completed = task.completed
+    editingTask.progress = task.progress
+    editingTask.time_up = task.time_up
+
+    showEditModal.value = true
+  }
+}
+
+// 更新任务函数
+const updateTask = () => {
+  if (!editingTaskId.value) return
+
+  // 更新任务，但保留任务完成状态和进度
+  const updatedTasks = tasksModel.value.map((task) => {
+    if (task.id === editingTaskId.value) {
+      // 如果预估时间发生变化，需要重新计算 cycleList
+      let cycleList = task.cycleList
+      if (task.estimatedTime !== editingTask.estimatedTime) {
+        let min = editingTask.estimatedTime * 60
+        const timeArrange: CycleItem[] = []
+        while (min > 0) {
+          if (min >= 30) {
+            timeArrange.push([25, 'focus'])
+            timeArrange.push([5, 'rest'])
+            min -= 30
+          } else {
+            timeArrange.push([min, 'focus'])
+            min = 0
+          }
+        }
+        cycleList = timeArrange.concat([[0, 'end']])
+      }
+
+      return {
+        ...task,
+        name: editingTask.name,
+        estimatedTime: editingTask.estimatedTime,
+        deadline: editingTask.deadline,
+        cycleList: cycleList,
+      }
+    }
+    return task
+  })
+
+  tasksModel.value = updatedTasks
+  message.success('任务已更新')
+  showEditModal.value = false
+  editingTaskId.value = null
 }
 </script>
 
