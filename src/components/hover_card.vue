@@ -2,33 +2,29 @@
   <div class="card-container">
     <!-- 提供整个hover-area的插槽 -->
 
-      <!-- 默认的hover-area实现 -->
-      <div
-        class="hover-area"
-        @mouseenter="isHovered = true"
-        @mouseleave="isHovered = false"
-        :style="props.cardClass"
-        >
-        <!-- 允许外部通过具名插槽传入整个卡片 -->
-        <slot name="card">
-          <n-card class="hover-card">
-            <template #header>
-              <div class="card-title">卡片标题</div>
-            </template>
-            <div class="card-content">
-              这是一个居中显示的卡片，当鼠标悬浮时会从右侧展开操作按钮。
-            </div>
-            <template #footer>
-              <div class="card-footer">最后更新：今天</div>
-            </template>
-          </n-card>
-        </slot>
+    <!-- 默认的hover-area实现 -->
+    <div
+      class="hover-area"
+      @mouseenter="isHovered = true"
+      @mouseleave="isHovered = false"
+      :style="resolvedStyle"
+    >
+      <!-- 允许外部通过具名插槽传入整个卡片 -->
+      <slot name="card">
+        <n-card class="hover-card">
+          <template #header>
+            <div class="card-title">卡片标题</div>
+          </template>
+          <div class="card-content">这是一个居中显示的卡片，当鼠标悬浮时会从右侧展开操作按钮。</div>
+          <template #footer>
+            <div class="card-footer">最后更新：今天</div>
+          </template>
+        </n-card>
+      </slot>
 
-        <!-- 按钮容器绝对定位在卡片右侧 -->
-        <div class="action-buttons" :class="{ 'buttons-visible': isHovered }">
-          <slot
-            name="hover-area"
-          >
+      <!-- 按钮容器绝对定位在卡片右侧 -->
+      <div class="action-buttons" :class="{ 'buttons-visible': isHovered }">
+        <slot name="hover-area">
           <n-button circle secondary class="action-button">
             <template #icon>
               <n-icon><EditOutlined /></n-icon>
@@ -50,23 +46,30 @@
             </template>
           </n-button>
         </slot>
-        </div>
       </div>
-
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, type ComputedRef, type PropType, type StyleValue } from 'vue'
+import { ref, type ComputedRef, type PropType, type StyleValue, computed } from 'vue'
 import { NCard, NButton, NIcon } from 'naive-ui'
 import { EditOutlined, ShareAltOutlined, DeleteOutlined, MoreOutlined } from '@vicons/antd'
 
-// 修改：允许 cardClass 接受 computed 属性
+// 修改：prop 名称更改为 cardStyle 以更清晰地表示其用途
 const props = defineProps({
-  cardClass: {
-    type: [String, Object,] as PropType<StyleValue | ComputedRef<string>>,
+  cardStyle: {
+    type: [String, Object] as PropType<StyleValue | ComputedRef<string>>,
     default: '',
   },
+})
+
+// 添加计算属性来解析可能的 ComputedRef 值
+const resolvedStyle = computed(() => {
+  if (props.cardStyle && typeof props.cardStyle === 'object' && 'value' in props.cardStyle) {
+    return props.cardStyle.value
+  }
+  return props.cardStyle
 })
 
 const isHovered = ref(false)

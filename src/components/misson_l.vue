@@ -86,7 +86,7 @@
         <hover_card
           v-for="task in uncompletedTasks"
           :key="task.id"
-          :cardClass="cardStyle"
+          :card-style="cardStyle"
           class="task-item"
         >
           <template #card>

@@ -67,12 +67,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onBeforeUnmount, onMounted, nextTick } from 'vue'
-import { NButton, NSpace, NProgress, NH1, NIcon } from 'naive-ui'
+import { ref, reactive, computed, onBeforeUnmount, onMounted,  } from 'vue'
+import { NButton, NSpace, NProgress, NH1 } from 'naive-ui'
 import VueCountdown from '@chenfengyuan/vue-countdown'
 import type { Task } from '@/utils/share_type'
 import { default_task } from '@/utils/share_type'
-import { Howl } from 'howler'
 import { defineEmits, defineExpose } from 'vue'
 // 删除原 props 定义，使用 config 代替
 
@@ -94,28 +93,26 @@ const countdown_start = ref(false)
 // 音频配置
 const soundEnabled = ref(true)
 const sounds = reactive({
-  focus: new Howl({
-    src: ['/sounds/focus-start.mp3'],
-    volume: 0.7,
-  }),
-  rest: new Howl({
-    src: ['/sounds/rest-start.mp3'],
-    volume: 0.7,
-  }),
-  complete: new Howl({
-    src: ['/sounds/complete.mp3'],
-    volume: 0.7,
-  }),
+  focus: new Audio('/sounds/focus-start.mp3'),
+  rest: new Audio('/sounds/rest-start.mp3'),
+  complete: new Audio('/sounds/complete.mp3'),
+})
+
+// 设置音量
+Object.values(sounds).forEach((audio) => {
+  audio.volume = 0.7
 })
 
 // 音频控制函数
 const playSound = async (soundType: 'focus' | 'rest' | 'complete') => {
   if (!soundEnabled.value) return
   return new Promise<void>((resolve) => {
-    const soundId = sounds[soundType].play()
-    sounds[soundType].once('end', () => {
+    const audio = sounds[soundType]
+    audio.currentTime = 0 // 重置音频播放位置
+    audio.play()
+    audio.onended = () => {
       resolve()
-    }, soundId)
+    }
   })
 }
 
@@ -153,7 +150,7 @@ const timerContainerStyle = computed(() => {
 const nextStage = async () => {
   // 播放当前阶段完成的声音
   if (config.task.progress == config.task.cycleList.length - 1) {
-   return
+    return
   }
   if (config.infinite) {
     // 无限模式下在 focus 和 rest 之间切换
@@ -161,25 +158,25 @@ const nextStage = async () => {
     // 播放新阶段开始的声音
     await playSound(config.task.progress === 0 ? 'focus' : 'rest')
   } else {
-      config.task.progress++
-      if(config.task.progress == config.task.cycleList.length - 1) {
-        config.task.time_up = true
-        await playSound('complete')
-        emit('quit', config.task)
-        console.log('Cycle complete!')
-        countdown_start.value = false
-        return
-      }
-      countdownRef.value?.restart()
-      isRunning.value = true
+    config.task.progress++
+    if (config.task.progress == config.task.cycleList.length - 1) {
+      config.task.time_up = true
+      await playSound('complete')
+      emit('quit', config.task)
+      console.log('Cycle complete!')
+      countdown_start.value = false
+      return
+    }
+    countdownRef.value?.restart()
+    isRunning.value = true
 
-      // 根据当前阶段标签播放相应的声音
-      const nextModeLabel = config.task.cycleList[config.task.progress][1].toLowerCase()
-      if (nextModeLabel.includes('focus')) {
-        await playSound('focus')
-      } else if (nextModeLabel.includes('rest')) {
-        await playSound('rest')
-      }
+    // 根据当前阶段标签播放相应的声音
+    const nextModeLabel = config.task.cycleList[config.task.progress][1].toLowerCase()
+    if (nextModeLabel.includes('focus')) {
+      await playSound('focus')
+    } else if (nextModeLabel.includes('rest')) {
+      await playSound('rest')
+    }
   }
 }
 
@@ -246,11 +243,19 @@ const updateTimerSize = () => {
 onMounted(() => {
   updateTimerSize()
   window.addEventListener('resize', updateTimerSize)
-  // nextStage()
+  // 预加载音频
+  Object.values(sounds).forEach((audio) => {
+    audio.load()
+  })
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updateTimerSize)
+  // 清理音频资源
+  Object.values(sounds).forEach((audio) => {
+    audio.onended = null
+    audio.pause()
+  })
 })
 
 // 新增 setConfig 函数并暴露给外部
