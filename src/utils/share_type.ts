@@ -4,7 +4,7 @@ export interface Task {
   id: number
   name: string
   estimatedTime: number
-  cycleSet: number[]
+  cycleSet?: number[]
   longCycle: boolean
   cycleList: CycleItem[]
   progress: number
@@ -16,6 +16,7 @@ export const default_task:Task = {
   id: Date.now(),
   name: 'default',
   estimatedTime: 1,
+  longCycle: false,
   deadline: Date.now(),
   completed: false,
   cycleList: [[25, 'focus'], [5, 'rest'],[25, 'focus'], [5, 'rest'],[100, 'end']],
