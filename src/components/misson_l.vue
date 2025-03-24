@@ -197,6 +197,14 @@
           />
         </n-form-item>
 
+        <n-form-item label="番茄钟模式">
+          <n-space align="center">
+            <span>25/5</span>
+            <n-switch v-model:value="newTask.longCycle" />
+            <span>50/10</span>
+          </n-space>
+        </n-form-item>
+
         <n-space justify="end">
           <n-button @click="showModal = false">取消</n-button>
           <n-button type="primary" @click="addTask">确认</n-button>
@@ -229,6 +237,14 @@
           />
         </n-form-item>
 
+        <n-form-item label="番茄钟模式">
+          <n-space align="center">
+            <span>25分钟专注/5分钟休息</span>
+            <n-switch v-model:value="editingTask.longCycle" />
+            <span>50分钟专注/10分钟休息</span>
+          </n-space>
+        </n-form-item>
+
         <n-space justify="end">
           <n-button @click="showEditModal = false">取消</n-button>
           <n-button type="primary" @click="updateTask">保存</n-button>
@@ -258,6 +274,7 @@ import {
   NText,
   NFlex,
   NH3,
+  NSwitch,
 } from 'naive-ui'
 import { AddOutline, CheckmarkOutline, SettingsOutline } from '@vicons/ionicons5'
 import type { CycleItem, Task } from '@/utils/share_type'
@@ -291,6 +308,7 @@ interface NewTask {
   name: string
   estimatedTime: number
   deadline: number | null
+  longCycle: boolean
 }
 
 // 获取当天23:59的时间戳
@@ -304,6 +322,7 @@ const newTask = reactive<NewTask>({
   name: '',
   estimatedTime: 1,
   deadline: getTodayEndTime(), // 默认设置为当天23:59
+  longCycle: false, // 默认使用25/5模式
 })
 
 // 新增：补充 form 的校验规则
@@ -331,14 +350,25 @@ const addTask = () => {
     cycleList: [],
     progress: 0,
     time_up: false,
+    longCycle: newTask.longCycle,
   }
   let min = task.estimatedTime * 60
   const timeArrange: CycleItem[] = []
+
+  // 根据用户选择的模式生成番茄钟周期
+  const focusTime = newTask.longCycle ? 50 : 25
+  const restTime = newTask.longCycle ? 10 : 5
+  const cycleTime = focusTime + restTime
+
   while (min > 0) {
-    if (min >= 30) {
-      timeArrange.push([25, 'focus'])
-      timeArrange.push([5, 'rest'])
-      min -= 30
+    if (min >= cycleTime) {
+      timeArrange.push([focusTime, 'focus'])
+      timeArrange.push([restTime, 'rest'])
+      min -= cycleTime
+    } else if (min >= focusTime) {
+      timeArrange.push([focusTime, 'focus'])
+      timeArrange.push([min - focusTime, 'rest'])
+      min = 0
     } else {
       timeArrange.push([min, 'focus'])
       min = 0
@@ -353,6 +383,7 @@ const addTask = () => {
   newTask.name = ''
   newTask.estimatedTime = 1
   newTask.deadline = getTodayEndTime() // 重置为当天23:59
+  newTask.longCycle = false // 重置为默认模式
 }
 
 const toggleTaskStatus = (id: number) => {
@@ -411,6 +442,7 @@ const editingTask = reactive<Task>({
   cycleList: [],
   progress: 0,
   time_up: false,
+  longCycle: false,
 })
 const editingTaskId = ref<number | null>(null)
 
@@ -427,6 +459,7 @@ const SetTaskInfo = (id: number) => {
     editingTask.completed = task.completed
     editingTask.progress = task.progress
     editingTask.time_up = task.time_up
+    editingTask.longCycle = task.longCycle || false // 兼容旧数据
 
     showEditModal.value = true
   }
@@ -439,16 +472,29 @@ const updateTask = () => {
   // 更新任务，但保留任务完成状态和进度
   const updatedTasks = tasksModel.value.map((task) => {
     if (task.id === editingTaskId.value) {
-      // 如果预估时间发生变化，需要重新计算 cycleList
+      // 如果预估时间或番茄钟模式发生变化，需要重新计算 cycleList
       let cycleList = task.cycleList
-      if (task.estimatedTime !== editingTask.estimatedTime) {
+      if (
+        task.estimatedTime !== editingTask.estimatedTime ||
+        task.longCycle !== editingTask.longCycle
+      ) {
         let min = editingTask.estimatedTime * 60
         const timeArrange: CycleItem[] = []
+
+        // 根据用户选择的模式生成番茄钟周期
+        const focusTime = editingTask.longCycle ? 50 : 25
+        const restTime = editingTask.longCycle ? 10 : 5
+        const cycleTime = focusTime + restTime
+
         while (min > 0) {
-          if (min >= 30) {
-            timeArrange.push([25, 'focus'])
-            timeArrange.push([5, 'rest'])
-            min -= 30
+          if (min >= cycleTime) {
+            timeArrange.push([focusTime, 'focus'])
+            timeArrange.push([restTime, 'rest'])
+            min -= cycleTime
+          } else if (min >= focusTime) {
+            timeArrange.push([focusTime, 'focus'])
+            timeArrange.push([min - focusTime, 'rest'])
+            min = 0
           } else {
             timeArrange.push([min, 'focus'])
             min = 0
@@ -464,6 +510,7 @@ const updateTask = () => {
         estimatedTime: editingTask.estimatedTime,
         deadline: editingTask.deadline,
         cycleList: cycleList,
+        longCycle: editingTask.longCycle,
       }
     }
     return task

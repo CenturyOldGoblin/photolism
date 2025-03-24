@@ -4,6 +4,8 @@ export interface Task {
   id: number
   name: string
   estimatedTime: number
+  cycleSet: number[]
+  longCycle: boolean
   cycleList: CycleItem[]
   progress: number
   deadline: number | null
