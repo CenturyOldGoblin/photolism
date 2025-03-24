@@ -44,9 +44,9 @@
     <div class="controls-container">
       <div class="timer-controls">
         <n-space>
-          <n-button type="primary" size="large" @click="toggleTimer" class="control-button">
+          <!-- <n-button type="primary" size="large" @click="toggleTimer" class="control-button">
             {{ isRunning ? 'Pause' : 'Start' }}
-          </n-button>
+          </n-button> -->
           <n-button
             type="default"
             size="large"
