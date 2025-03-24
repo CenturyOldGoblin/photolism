@@ -74,9 +74,21 @@
         </div> -->
       </div>
 
+      <!-- 添加任务按钮移到这里 -->
+      <n-button class="task-item" @click="showModal = true" type="info" :style="cardStyle">
+        <n-icon :size="20"><add-outline /></n-icon>
+
+        <!-- <span>添加任务</span> -->
+      </n-button>
+
       <!-- 未完成任务列表 -->
       <n-infinite-scroll class="task-list">
-        <hover_card v-for="task in uncompletedTasks" :key="task.id" :cardClass="cardStyle">
+        <hover_card
+          v-for="task in uncompletedTasks"
+          :key="task.id"
+          :cardClass="cardStyle"
+          class="task-item"
+        >
           <template #card>
             <n-card :hoverable="true" @click="onTaskClick(task)">
               <n-thing>
@@ -158,10 +170,6 @@
       </div> -->
 
       <!-- 添加任务按钮 -->
-      <div class="add-task" @click="showModal = true">
-        <n-icon><add-outline /></n-icon>
-        <span>添加任务</span>
-      </div>
     </div>
 
     <!-- 新增任务弹窗 -->
@@ -284,10 +292,18 @@ interface NewTask {
   estimatedTime: number
   deadline: number | null
 }
+
+// 获取当天23:59的时间戳
+const getTodayEndTime = (): number => {
+  const today = new Date()
+  today.setHours(23, 59, 0, 0)
+  return today.getTime()
+}
+
 const newTask = reactive<NewTask>({
   name: '',
   estimatedTime: 1,
-  deadline: null,
+  deadline: getTodayEndTime(), // 默认设置为当天23:59
 })
 
 // 新增：补充 form 的校验规则
@@ -328,14 +344,15 @@ const addTask = () => {
       min = 0
     }
   }
-  task.cycleList = timeArrange.concat([[0, 'end']])
+  timeArrange.push([0, 'end'])
+  task.cycleList = timeArrange
   tasksModel.value = [...tasksModel.value, task]
   message.success('任务添加成功')
   showModal.value = false
   // 重置表单
   newTask.name = ''
   newTask.estimatedTime = 1
-  newTask.deadline = null
+  newTask.deadline = getTodayEndTime() // 重置为当天23:59
 }
 
 const toggleTaskStatus = (id: number) => {
@@ -438,6 +455,7 @@ const updateTask = () => {
           }
         }
         cycleList = timeArrange.concat([[0, 'end']])
+        task.time_up = false
       }
 
       return {
@@ -574,8 +592,7 @@ const updateTask = () => {
 }
 
 .task-item {
-  width: 40%;
-  margin: 0 auto;
+  margin: 16px auto;
 }
 
 .task-checkbox {
@@ -638,11 +655,9 @@ const updateTask = () => {
   padding: 16px 24px;
   cursor: pointer;
   transition: color 0.2s;
-  margin-top: auto;
-}
-
-.add-task i {
-  margin-right: 8px;
+  /* 移除 margin-top: auto; 避免推到底部 */
+  margin-bottom: 16px; /* 添加底部间距与任务列表分隔 */
+  justify-content: center; /* 让按钮居中显示 */
 }
 
 .cycle-box {

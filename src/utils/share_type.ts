@@ -16,7 +16,7 @@ export const default_task:Task = {
   estimatedTime: 1,
   deadline: Date.now(),
   completed: false,
-  cycleList: [[25, 'focus'], [5, 'rest'],[25, 'focus'], [5, 'rest'],[0, 'end']],
+  cycleList: [[25, 'focus'], [5, 'rest'],[25, 'focus'], [5, 'rest'],[100, 'end']],
   progress: 0,
   time_up: false
 }

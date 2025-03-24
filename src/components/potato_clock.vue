@@ -1,73 +1,79 @@
 <template>
-    <!-- <div class="fullscreen-container"> -->
-    <div class="pomodoro-content">
-      <!-- <div class="pomodoro-header">
+  <!-- <div class="fullscreen-container"> -->
+  <div class="pomodoro-content">
+    <!-- <div class="pomodoro-header">
           <h1 class="pomodoro-title">Pomodoro Timer</h1>
         </div> -->
-      <n-h1>
-        {{ config.task.name }}
-      </n-h1>
-      <div class="timer-display">
-        <div :style="timerContainerStyle">
-          <vue-countdown
-            ref="countdownRef"
-            :time="currentModeTime"
-            @end="onEnd"
-            v-slot="{ totalMilliseconds, minutes, seconds }"
+    <n-h1>
+      {{ config.task.name }}
+    </n-h1>
+    <div class="timer-display">
+      <div :style="timerContainerStyle">
+        <vue-countdown
+          ref="countdownRef"
+          :time="currentModeTime"
+          @end="onEnd"
+          v-slot="{ totalMilliseconds, minutes, seconds }"
+          v-if="countdown_start"
+        >
+          <n-progress
+            type="circle"
+            :percentage="
+              currentModeTime === 0
+                ? 100
+                : Math.round((1 - totalMilliseconds / currentModeTime) * 100)
+            "
+            :color="modeColor"
+            rail-style="{ stroke: '#18181b' }"
+            :stroke-width="strokeWidth"
+            :style="`transform: scale(${timerSize});transform-origin: center center;`"
           >
-            <n-progress
-              type="circle"
-              :percentage="
-                currentModeTime === 0 ? 100 : Math.round(
-                  (1 - totalMilliseconds / currentModeTime) *
-                    100,
-                )
-              "
-              :color="modeColor"
-              rail-style="{ stroke: '#18181b' }"
-              :stroke-width="strokeWidth"
-              :style="`transform: scale(${timerSize});transform-origin: center center;`"
-            >
-              <div class="timer-text">
-                <span class="time" v-if="!config.task.time_up"
-                  >{{ minutes.toString().padStart(2, '0') }}:{{
-                    seconds.toString().padStart(2, '0')
-                  }}</span>
-                  <div v-else>
-                    Complete!
-                  </div>
-              </div>
-
-            </n-progress>
-          </vue-countdown>
-        </div>
-      </div>
-
-      <div class="controls-container">
-        <div class="timer-controls">
-          <n-space>
-            <n-button type="primary" size="large" @click="toggleTimer" class="control-button">
-              {{ isRunning ? 'Pause' : 'Start' }}
-            </n-button>
-            <n-button type="default" size="large" @click="()=>emit('quit', config.task)" class="control-button">
-              quit
-            </n-button>
-            <n-button type="default" size="large" @click="debugEndTimer" class="control-button">
-              Debug End
-            </n-button>
-          </n-space>
-        </div>
+            <div class="timer-text">
+              <span class="time" v-if="!config.task.time_up"
+                >{{ minutes.toString().padStart(2, '0') }}:{{
+                  seconds.toString().padStart(2, '0')
+                }}</span
+              >
+              <div v-else>Complete!</div>
+            </div>
+          </n-progress>
+        </vue-countdown>
       </div>
     </div>
-    <!-- </div> -->
+
+    <div class="controls-container">
+      <div class="timer-controls">
+        <n-space>
+          <n-button type="primary" size="large" @click="toggleTimer" class="control-button">
+            {{ isRunning ? 'Pause' : 'Start' }}
+          </n-button>
+          <n-button
+            type="default"
+            size="large"
+            @click="() => emit('quit', config.task)"
+            class="control-button"
+          >
+            quit
+          </n-button>
+          <n-button type="default" size="large" @click="debugEndTimer" class="control-button">
+            Debug End
+          </n-button>
+        </n-space>
+      </div>
+    </div>
+  </div>
+
+  <!-- </div> -->
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onBeforeUnmount, onMounted } from 'vue'
-import { NButton, NSpace, NProgress,NH1 } from 'naive-ui'
+import { ref, reactive, computed, onBeforeUnmount, onMounted, nextTick } from 'vue'
+import { NButton, NSpace, NProgress, NH1, NIcon } from 'naive-ui'
 import VueCountdown from '@chenfengyuan/vue-countdown'
 import type { Task } from '@/utils/share_type'
 import { default_task } from '@/utils/share_type'
+import { Howl } from 'howler'
+import { defineEmits, defineExpose } from 'vue'
 // 删除原 props 定义，使用 config 代替
 
 const config = reactive({
@@ -84,12 +90,43 @@ const timerSize = ref(1.5)
 const strokeWidth = ref(5)
 const baseSize = ref(120)
 const countdownRef = ref<InstanceType<typeof VueCountdown> | null>(null)
+const countdown_start = ref(false)
+// 音频配置
+const soundEnabled = ref(true)
+const sounds = reactive({
+  focus: new Howl({
+    src: ['/sounds/focus-start.mp3'],
+    volume: 0.7,
+  }),
+  rest: new Howl({
+    src: ['/sounds/rest-start.mp3'],
+    volume: 0.7,
+  }),
+  complete: new Howl({
+    src: ['/sounds/complete.mp3'],
+    volume: 0.7,
+  }),
+})
+
+// 音频控制函数
+const playSound = async (soundType: 'focus' | 'rest' | 'complete') => {
+  if (!soundEnabled.value) return
+  return new Promise<void>((resolve) => {
+    const soundId = sounds[soundType].play()
+    sounds[soundType].once('end', () => {
+      resolve()
+    }, soundId)
+  })
+}
+
+const toggleSound = () => {
+  soundEnabled.value = !soundEnabled.value
+}
 
 // 计算属性：当前周期时间（毫秒）、标签及颜色
 const currentModeTime = computed(() => {
   // Check if progress is within bounds
-    return config.task.cycleList[config.task.progress][0] * 60 * 1000;
-
+  return config.task.cycleList[config.task.progress][0] * 60 * 1000
 })
 const currentModeLabel = computed(() => config.task.cycleList[config.task.progress][1])
 const modeColor = computed(() => {
@@ -113,32 +150,42 @@ const timerContainerStyle = computed(() => {
 // 修改后的onEnd：遍历cycleList，遍历完毕后emit事件并重置序号
 
 // First add this function at the top level of the script setup
-const nextStage = () => {
+const nextStage = async () => {
+  // 播放当前阶段完成的声音
+  if (config.task.progress == config.task.cycleList.length - 1) {
+   return
+  }
   if (config.infinite) {
     // 无限模式下在 focus 和 rest 之间切换
     config.task.progress = config.task.progress === 0 ? 1 : 0
+    // 播放新阶段开始的声音
+    await playSound(config.task.progress === 0 ? 'focus' : 'rest')
   } else {
-    config.task.progress++
-    if (config.task.progress <= config.task.cycleList.length - 2) {
+      config.task.progress++
+      if(config.task.progress == config.task.cycleList.length - 1) {
+        config.task.time_up = true
+        await playSound('complete')
+        emit('quit', config.task)
+        console.log('Cycle complete!')
+        countdown_start.value = false
+        return
+      }
       countdownRef.value?.restart()
-    isRunning.value = true
-    } else {
-      // emit('cycleComplete')
-      config.task.time_up = true
-      emit('quit', config.task)
-      console.log('Cycle complete!')
-      // config.task.progress = 0
-    }
+      isRunning.value = true
 
-
+      // 根据当前阶段标签播放相应的声音
+      const nextModeLabel = config.task.cycleList[config.task.progress][1].toLowerCase()
+      if (nextModeLabel.includes('focus')) {
+        await playSound('focus')
+      } else if (nextModeLabel.includes('rest')) {
+        await playSound('rest')
+      }
   }
-
 }
 
 // Then modify the onEnd function to simply call nextStage
 const onEnd = () => {
   nextStage()
-
 }
 
 const toggleTimer = () => {
@@ -161,6 +208,16 @@ const toggleTimer = () => {
       countdownRef.value.start()
       isRunning.value = true
       console.log('计时器已启动')
+
+      // 如果是首次启动，播放对应阶段的声音
+      if (config.task.progress === 0) {
+        const currentLabel = currentModeLabel.value.toLowerCase()
+        if (currentLabel.includes('focus')) {
+          playSound('focus')
+        } else if (currentLabel.includes('rest')) {
+          playSound('rest')
+        }
+      }
     } catch (error) {
       console.error('启动计时器失败:', error)
     }
@@ -198,7 +255,14 @@ onBeforeUnmount(() => {
 
 // 新增 setConfig 函数并暴露给外部
 const setConfig = (newConfig: Partial<{ task: Task; infinite: boolean }>) => {
-  Object.assign(config, newConfig)
+  if (newConfig.task) {
+    config.task = newConfig.task
+  }
+  if (typeof newConfig.infinite !== 'undefined') {
+    config.infinite = newConfig.infinite
+  }
+  console.log('Task 全部信息:', config.task)
+  countdown_start.value = true
 }
 
 defineExpose({ setConfig, resetTimer })
@@ -326,5 +390,12 @@ defineExpose({ setConfig, resetTimer })
     font-size: 1rem;
     padding: 0.4rem 1.2rem;
   }
+}
+
+.sound-control {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
 }
 </style>

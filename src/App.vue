@@ -9,11 +9,15 @@ import { default_task } from '@/utils/share_type'
 import hover_card from './components/hover_card.vue'
 const transitionRef = ref<InstanceType<typeof NintendoSwitchTransition>>()
 const clockRef = ref<InstanceType<typeof potato_clock>>()
+const clockKey = ref(0)
+
 // 新增：全局任务列表
 
 const tasks = ref<Task[]>([ default_task])
 const task_start = (task: Task) => {
-  console.log(task.name)
+  console.log('Task 全部信息:', JSON.stringify(task, null, 2))
+
+  restartClock()
   clockRef.value?.setConfig({ task: task, infinite: false })
   transitionRef.value?.transitionTo('right', 2)
   clockRef.value?.resetTimer()
@@ -30,6 +34,10 @@ const task_quit = (task : Task) => {
     transitionRef.value?.transitionTo('left', 1)
 
   }
+}
+function restartClock() {
+  // 改变 key 值，强制 Vue 重新渲染组件
+  clockKey.value++
 }
 onMounted(() => {
   transitionRef.value?.transitionTo('right', 1)
@@ -48,7 +56,7 @@ onMounted(() => {
           <misson_l v-model:tasks="tasks" @taskClick="task_start" />
         </template>
         <template #slot2>
-          <potato_clock ref="clockRef" @quit="task_quit"/>
+          <potato_clock ref="clockRef" @quit="task_quit" />
         </template>
         <template #slot3>
           <hover_card style="height:100%"/>
