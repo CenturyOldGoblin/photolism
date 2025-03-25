@@ -37,7 +37,6 @@ window.addEventListener('beforeunload', () => {
 const task_start = (task: Task) => {
   console.log('Task 全部信息:', JSON.stringify(task, null, 2))
 
-  restartClock()
   clockRef.value?.setConfig({ task: task, infinite: false })
   transitionRef.value?.transitionTo('right', 2)
   clockRef.value?.resetTimer()

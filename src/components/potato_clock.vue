@@ -268,6 +268,8 @@ const setConfig = (newConfig: Partial<{ task: Task; infinite: boolean }>) => {
   }
   console.log('Task 全部信息:', config.task)
   countdown_start.value = true
+  countdownRef.value?.restart()
+
 }
 
 defineExpose({ setConfig, resetTimer })
