@@ -34,10 +34,10 @@ window.addEventListener('beforeunload', () => {
   localStorage.setItem('potato_tasks', JSON.stringify(tasks.value))
 })
 
-const task_start = (task: Task) => {
+const task_start = (task: Task, infinite : Boolean) => {
   console.log('Task 全部信息:', JSON.stringify(task, null, 2))
 
-  clockRef.value?.setConfig({ task: task, infinite: false })
+  clockRef.value?.setConfig({ task: task, infinite: infinite })
   transitionRef.value?.transitionTo('right', 2)
   clockRef.value?.resetTimer()
 }

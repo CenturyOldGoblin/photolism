@@ -23,3 +23,14 @@ export const default_task:Task = {
   progress: 0,
   time_up: false
 }
+export const infinite_task:Task = {
+  id: Date.now(),
+  name: 'infinite',
+  estimatedTime: 1,
+  longCycle: true,
+  deadline: Date.now(),
+  completed: false,
+  cycleList: [[50, 'focus'], [10, 'rest'],[25, 'focus'], [5, 'rest']],
+  progress: 0,
+  time_up: false
+}

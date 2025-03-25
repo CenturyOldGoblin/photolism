@@ -19,7 +19,7 @@
           <n-progress
             type="circle"
             :percentage="
-              currentModeTime === 0
+              config.task.time_up
                 ? 100
                 : Math.round((1 - totalMilliseconds / currentModeTime) * 100)
             "
@@ -90,6 +90,7 @@ const strokeWidth = ref(5)
 const baseSize = ref(120)
 const countdownRef = ref<InstanceType<typeof VueCountdown> | null>(null)
 const countdown_start = ref(false)
+
 // 音频配置
 const soundEnabled = ref(true)
 const sounds = reactive({
@@ -260,6 +261,7 @@ onBeforeUnmount(() => {
 
 // 新增 setConfig 函数并暴露给外部
 const setConfig = (newConfig: Partial<{ task: Task; infinite: boolean }>) => {
+  // isRunning.value = false
   if (newConfig.task) {
     config.task = newConfig.task
   }

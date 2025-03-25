@@ -1,86 +1,22 @@
 <template>
   <div class="todo-app">
-    <!-- 左侧导航栏 -->
-    <!-- <div class="sidebar">
-      <div class="user-profile">
-        <div class="avatar">O</div>
-        <div class="user-info">
-          <div class="username">用户</div>
-          <div class="email">user@example.com</div>
-        </div>
-      </div>
-
-      <div class="search-container">
-        <n-input
-          placeholder="搜索"
-          v-model:value="searchText"
-          class="search-input"
-        >
-          <template #suffix>
-            <n-icon><search-outline /></n-icon>
-          </template>
-        </n-input>
-      </div>
-
-      <div class="nav-items">
-        <div class="nav-item">
-          <n-icon><sunny-outline /></n-icon>
-          <span>我的一天</span>
-        </div>
-        <div class="nav-item">
-          <n-icon><star-outline /></n-icon>
-          <span>重要</span>
-        </div>
-        <div class="nav-item">
-          <n-icon><calendar-outline /></n-icon>
-          <span>计划内</span>
-        </div>
-        <div class="nav-item">
-          <n-icon><person-outline /></n-icon>
-          <span>已分配给我</span>
-        </div>
-        <div class="nav-item">
-          <n-icon><mail-outline /></n-icon>
-          <span>标记的电子邮件</span>
-        </div>
-        <div class="nav-item active">
-          <n-icon><home-outline /></n-icon>
-          <span>任务</span>
-          <span class="count">{{ tasks.length }}</span>
-        </div>
-      </div>
-    </div> -->
 
     <!-- 主内容区 -->
     <div class="main-content">
       <div class="list-header">
+
         <div class="list-title"><span class="emoji">👋</span> 任务列表</div>
-        <!-- <div class="list-actions">
-          <n-button quaternary circle>
-            <template #icon>
-              <n-icon><person-add-outline /></n-icon>
-            </template>
-          </n-button>
-          <n-button quaternary circle>
-            <template #icon>
-              <n-icon><image-outline /></n-icon>
-            </template>
-          </n-button>
-          <n-button quaternary circle>
-            <template #icon>
-              <n-icon><ellipsis-horizontal /></n-icon>
-            </template>
-          </n-button>
-        </div> -->
       </div>
 
       <!-- 添加任务按钮移到这里 -->
       <n-button class="task-item" @click="showModal = true" type="info" :style="cardStyle">
         <n-icon :size="20"><add-outline /></n-icon>
 
-        <!-- <span>添加任务</span> -->
-      </n-button>
 
+      </n-button>
+      <n-button class="task-item" @click="onTaskClick(infinite_task,true)" type="error" :style="cardStyle">
+        ♾ infinite
+      </n-button>
       <!-- 未完成任务列表 -->
       <n-infinite-scroll class="task-list">
         <hover_card
@@ -90,7 +26,7 @@
           class="task-item"
         >
           <template #card>
-            <n-card :hoverable="true" @click="onTaskClick(task)">
+            <n-card :hoverable="true" @click="onTaskClick(task,false)">
               <n-thing>
                 <template #header>
                   <n-h3 prefix="bar" align-text>
@@ -277,7 +213,7 @@ import {
   NSwitch,
 } from 'naive-ui'
 import { AddOutline, CheckmarkOutline, SettingsOutline } from '@vicons/ionicons5'
-import type { CycleItem, Task } from '@/utils/share_type'
+import { default_task, infinite_task, type CycleItem, type Task } from '@/utils/share_type'
 import hover_card from './hover_card.vue'
 // 修改：使用 v-model 传入 tasks
 const props = defineProps<{
@@ -374,7 +310,7 @@ const addTask = () => {
       min = 0
     }
   }
-  timeArrange.push([0, 'end'])
+  timeArrange.push([100, 'end'])
   task.cycleList = timeArrange
   tasksModel.value = [...tasksModel.value, task]
   message.success('任务添加成功')
@@ -409,8 +345,8 @@ const formatDate = (timestamp: number | null): string => {
   return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
 }
 
-const onTaskClick = (task: Task): void => {
-  emit('taskClick', task)
+const onTaskClick = (task: Task, infinite: Boolean): void => {
+  emit('taskClick', task,infinite)
 }
 
 const boxStyle = (task: Task, cycleType: string, index: number) => {
