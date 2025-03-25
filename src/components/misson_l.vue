@@ -9,14 +9,16 @@
       </div>
 
       <!-- 添加任务按钮移到这里 -->
-      <n-button class="task-item" @click="showModal = true" type="info" :style="cardStyle">
+      <n-button @click="showModal = true" type="info" :style="[cardStyle, { margin: '8px auto' }]">
         <n-icon :size="20"><add-outline /></n-icon>
 
 
       </n-button>
-      <n-button class="task-item" @click="onTaskClick(infinite_task,true)" type="error" :style="cardStyle">
+
+      <n-button  @click="onTaskClick(infinite_task,true)" type="error" :style="[cardStyle, { margin: '8px auto' }]" >
         ♾ infinite
       </n-button>
+
       <!-- 未完成任务列表 -->
       <n-infinite-scroll class="task-list">
         <hover_card
