@@ -347,7 +347,7 @@ const formatDate = (timestamp: number | null): string => {
   return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
 }
 
-const onTaskClick = (task: Task, infinite: Boolean): void => {
+const onTaskClick = (task: Task, infinite: boolean): void => {
   emit('taskClick', task,infinite)
 }
 

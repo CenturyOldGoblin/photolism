@@ -260,7 +260,7 @@ onBeforeUnmount(() => {
 })
 
 // 新增 setConfig 函数并暴露给外部
-const setConfig = (newConfig: Partial<{ task: Task; infinite: Boolean }>) => {
+const setConfig = (newConfig: Partial<{ task: Task; infinite: boolean }>) => {
   // isRunning.value = false
   if (newConfig.task) {
     config.task = newConfig.task
